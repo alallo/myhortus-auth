@@ -67,6 +67,38 @@ namespace myhortus_auth.Controllers
             }  
             return Unauthorized();  
         }  
+
+        [HttpGet]  
+        [Route("validate")] 
+        public ActionResult<Guid> Validate([FromQuery(Name = "email")] string email, [FromQuery(Name = "token")] string token)
+        {
+            var user = userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"])); 
+            var tokenHandler = new JwtSecurityTokenHandler();
+            try
+            {
+                tokenHandler.ValidateToken(token, new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidIssuer = _configuration["JWT:ValidIssuer"],
+                    ValidAudience = _configuration["JWT:ValidAudience"],
+                    IssuerSigningKey = authSigningKey
+                }, out SecurityToken validatedToken);
+            }
+            catch
+            {
+                return BadRequest("Invalid token.");
+            }
+            return Ok();
+        }
   
         [HttpPost]  
         [Route("register")]  
